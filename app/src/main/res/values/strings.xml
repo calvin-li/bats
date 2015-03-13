@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Bats</string>
 
-    <string name="hello_world">Hello world!</string>
+    <string name="title">Bats</string>
     <string name="action_settings">Settings</string>
+
 </resources>
