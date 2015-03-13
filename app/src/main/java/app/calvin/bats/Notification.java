@@ -1,88 +1,148 @@
 package app.calvin.bats;
 
+import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.TaskStackBuilder;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
-import android.widget.Toast;
+
+import java.sql.Time;
 
 public class Notification extends BroadcastReceiver {
 
+    public static final String BATS_STOP = "app.calvin.bats.Notification.BATS_STOP";
+    public static final int notificationID = 23;
+
+    protected static AlarmManager manager;
+    protected static PendingIntent alarmPendingIntent;
+    protected static final int updateInterval = 1000*60;
+
+    private static NotificationCompat.Builder batteryInfoBuilder;
+    private static Intent batteryStatus;
+    private static Boolean charging = false;
+    private static int level, voltage;
+    private static double temperature, lastChange;
+    private static String plugged, status;
+    private NotificationManager mNotificationManager;
+
     @Override
     public void onReceive(Context context, Intent intent) {
-        MainActivity.makeToast("Hi!", context);
+        //check if we should cancel notification instead of updating
+        if(intent.hasExtra("Action")) {
+            manager.cancel(alarmPendingIntent);
+            mNotificationManager =
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            mNotificationManager.cancel(notificationID);
+            return;
+        }
 
-        MainActivity.level = getBatteryInfo(BatteryManager.EXTRA_HEALTH);
-        MainActivity.plugged = plugToMessage(getBatteryInfo(BatteryManager.EXTRA_PLUGGED));
-        MainActivity.status = statusToMessage(getBatteryInfo(BatteryManager.EXTRA_STATUS));
-        MainActivity.temperature = getBatteryInfo(BatteryManager.EXTRA_TEMPERATURE) / 10;
-        MainActivity.voltage = getBatteryInfo(BatteryManager.EXTRA_VOLTAGE);
+        batteryStatus = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
-        //Build notification
-        String notificationTitle = MainActivity.status + MainActivity.plugged;
-        String notificationText = MainActivity.temperature + "\u00b0C / " + MainActivity.voltage + "mV";
+        level = getBatteryInfo(BatteryManager.EXTRA_HEALTH, context);
+        plugged = plugToMessage(getBatteryInfo(BatteryManager.EXTRA_PLUGGED, context));
+        status = statusToMessage(getBatteryInfo(BatteryManager.EXTRA_STATUS, context));
+        temperature = getBatteryInfo(BatteryManager.EXTRA_TEMPERATURE, context) / 10.0;
+        voltage = getBatteryInfo(BatteryManager.EXTRA_VOLTAGE, context);
 
-        NotificationCompat.Builder nBuilder =
-                new NotificationCompat.Builder(context)
-                        .setOngoing(true)
-                        .setSmallIcon(R.mipmap.ic_launcher)
-                        .setContentTitle(notificationTitle)
-                        .setContentText(notificationText);
-        Intent resultIntent = new Intent(context, MainActivity.class);
+        long timeInMilli = SystemClock.elapsedRealtime() - (long)lastChange;
+        int days = (int)(timeInMilli / (1000 * 60 * 60 * 24) + 0.5),
+                hours = (int)(timeInMilli / (1000 * 60 * 60)%24 + 0.5),
+                minutes = (int)(timeInMilli / (1000 * 60)%60 + 0.5);
+        String time = "Time formatting error";
+        if(days > 0) {
+            String formatString = "%d:%02d:%02d";
+            time = String.format(formatString, days, hours, minutes);
+        }
+        else if(days == 0){
+            String formatString = "%d:%02d";
+            time = String.format(formatString, hours, minutes);
+        }
 
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);
-        stackBuilder.addParentStack(MainActivity.class);
-        stackBuilder.addNextIntent(resultIntent);
-        PendingIntent resultPendingIntent =
-                stackBuilder.getPendingIntent(
-                        0,
-                        PendingIntent.FLAG_UPDATE_CURRENT
-                );
-        nBuilder.setContentIntent(resultPendingIntent);
+        String notificationTitle = status + plugged + " for " + time;
+        String notificationText = temperature + "\u00b0C / " + voltage + "mV";
 
-        NotificationManager mNotificationManager =
+        if(batteryInfoBuilder == null){
+            batteryInfoBuilder = new NotificationCompat.Builder(context)
+                .setOngoing(true);
+
+            lastChange = SystemClock.elapsedRealtime();
+
+            Intent resultIntent = new Intent(BATS_STOP);
+            resultIntent.putExtra("Action", "Stop");
+            PendingIntent resultPendingIntent = PendingIntent.getBroadcast(context, 0, resultIntent, 0);
+            batteryInfoBuilder.setContentIntent(resultPendingIntent);
+        }
+        batteryInfoBuilder
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(notificationTitle)
+                .setContentText(notificationText);
+
+        mNotificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        mNotificationManager.notify(MainActivity.notificationID, nBuilder.build());
-
+        mNotificationManager.notify(notificationID, batteryInfoBuilder.build());
     }
 
     private String plugToMessage(int state) {
-        String ret = " - ";
+        String ret = " ";
         if(state == BatteryManager.BATTERY_PLUGGED_AC)
-            return ret + "AC";
+            return ret + "(AC)";
         else if(state == BatteryManager.BATTERY_PLUGGED_USB)
-            return ret + "USB";
+            return ret + "(USB)";
         else if(state == BatteryManager.BATTERY_PLUGGED_WIRELESS)
-            return ret + "Wireless";
-        else
+            return ret + "(Wireless)";
+        else {
             return "";
+        }
     }
 
     private String statusToMessage(int state) {
-        if(state == BatteryManager.BATTERY_STATUS_CHARGING)
+        if(state == BatteryManager.BATTERY_STATUS_CHARGING) {
+            if(!charging) {
+                changeChargeState();
+            }
             return "Charging";
-        else if(state == BatteryManager.BATTERY_STATUS_DISCHARGING)
+        }
+        else if(state == BatteryManager.BATTERY_STATUS_DISCHARGING) {
+            if(charging) {
+                changeChargeState();
+            }
             return "Discharging";
-        else if(state == BatteryManager.BATTERY_STATUS_FULL)
+        }
+        else if(state == BatteryManager.BATTERY_STATUS_FULL) {
+            if(!charging) {
+                changeChargeState();
+            }
             return "Full";
-        else if(state == BatteryManager.BATTERY_STATUS_NOT_CHARGING)
+        }
+        else if(state == BatteryManager.BATTERY_STATUS_NOT_CHARGING) {
+            if(charging) {
+                changeChargeState();
+            }
             return "Not charging";
-        else if(state == BatteryManager.BATTERY_STATUS_UNKNOWN)
+        }
+        else if(state == BatteryManager.BATTERY_STATUS_UNKNOWN) {
             return "Status unknown";
+        }
         else
             return "-1";
     }
 
-    protected static int getBatteryInfo(String extra){
+    private void changeChargeState() {
+        charging = !charging;
+        lastChange = SystemClock.elapsedRealtime();
+    }
+
+    protected int getBatteryInfo(String extra, Context context){
         int defaultValue = -1;
-        int ret = MainActivity.batteryStatus.getIntExtra(extra, defaultValue);
+        int ret = batteryStatus.getIntExtra(extra, defaultValue);
         String errorMessage = "Attribute " + extra + " could not be fetched.";
         if(ret == defaultValue) {
-            //makeToast(errorMessage, this);
+           MainActivity.makeToast(errorMessage, context.getApplicationContext());
         }
         return ret;
     }
