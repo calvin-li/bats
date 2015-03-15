@@ -7,10 +7,18 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.PictureDrawable;
 import android.os.BatteryManager;
 import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
 
+import com.larvalabs.svgandroid.SVG;
+import com.larvalabs.svgandroid.SVGParser;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Time;
 
 public class Notification extends BroadcastReceiver {
@@ -68,7 +76,8 @@ public class Notification extends BroadcastReceiver {
 
         if(batteryInfoBuilder == null){
             batteryInfoBuilder = new NotificationCompat.Builder(context)
-                .setOngoing(true);
+                .setOngoing(true)
+                .setShowWhen(false);
 
             lastChange = SystemClock.elapsedRealtime();
 
@@ -77,8 +86,9 @@ public class Notification extends BroadcastReceiver {
             PendingIntent resultPendingIntent = PendingIntent.getBroadcast(context, 0, resultIntent, 0);
             batteryInfoBuilder.setContentIntent(resultPendingIntent);
         }
+
         batteryInfoBuilder
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.mipmap.outfile)
                 .setContentTitle(notificationTitle)
                 .setContentText(notificationText);
 
