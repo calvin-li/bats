@@ -14,9 +14,6 @@ import android.os.BatteryManager;
 import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
 
-import com.larvalabs.svgandroid.SVG;
-import com.larvalabs.svgandroid.SVGParser;
-
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.Time;
@@ -51,24 +48,25 @@ public class Notification extends BroadcastReceiver {
 
         batteryStatus = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
-        level = getBatteryInfo(BatteryManager.EXTRA_HEALTH, context);
+        level = getBatteryInfo(BatteryManager.EXTRA_LEVEL, context);
         plugged = plugToMessage(getBatteryInfo(BatteryManager.EXTRA_PLUGGED, context));
         status = statusToMessage(getBatteryInfo(BatteryManager.EXTRA_STATUS, context));
         temperature = getBatteryInfo(BatteryManager.EXTRA_TEMPERATURE, context) / 10.0;
         voltage = getBatteryInfo(BatteryManager.EXTRA_VOLTAGE, context);
 
         long timeInMilli = SystemClock.elapsedRealtime() - (long)lastChange;
-        int days = (int)(timeInMilli / (1000 * 60 * 60 * 24) + 0.5),
-                hours = (int)(timeInMilli / (1000 * 60 * 60)%24 + 0.5),
-                minutes = (int)(timeInMilli / (1000 * 60)%60 + 0.5);
+        int days = (int)(timeInMilli / (1000 * 60 * 60 * 24)),
+                hours = (int)(timeInMilli / (1000 * 60 * 60)%24),
+                minutes = (int)(timeInMilli / (1000 * 60)%60),
+                secs = (int)(timeInMilli / 1000 % 60);
         String time = "Time formatting error";
         if(days > 0) {
-            String formatString = "%d:%02d:%02d";
-            time = String.format(formatString, days, hours, minutes);
+            String formatString = "%d:%02d:%02d:%02d";
+            time = String.format(formatString, days, hours, minutes, secs);
         }
         else if(days == 0){
-            String formatString = "%d:%02d";
-            time = String.format(formatString, hours, minutes);
+            String formatString = "%d:%02d:%02d";
+            time = String.format(formatString, hours, minutes, secs);
         }
 
         String notificationTitle = status + plugged + " for " + time;
@@ -87,8 +85,9 @@ public class Notification extends BroadcastReceiver {
             batteryInfoBuilder.setContentIntent(resultPendingIntent);
         }
 
+        int icon = context.getResources().getIdentifier("a" + level, "mipmap", context.getPackageName());
         batteryInfoBuilder
-                .setSmallIcon(R.mipmap.outfile)
+                .setSmallIcon(icon)
                 .setContentTitle(notificationTitle)
                 .setContentText(notificationText);
 

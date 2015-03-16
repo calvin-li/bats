@@ -16,7 +16,6 @@ public class MainActivity extends ActionBarActivity {
 
     protected static final String TAG = "MainActivity";
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
