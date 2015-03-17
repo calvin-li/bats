@@ -31,7 +31,7 @@ public class Notification extends BroadcastReceiver {
     private static Intent batteryStatus;
     private static Boolean charging = false;
     private static int level, voltage;
-    private static double temperature, lastChange;
+    private static double temperature, lastChange = SystemClock.elapsedRealtime() ;
     private static String plugged, status;
     private NotificationManager mNotificationManager;
 
