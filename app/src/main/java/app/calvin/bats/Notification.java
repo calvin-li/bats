@@ -7,16 +7,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.drawable.PictureDrawable;
 import android.os.BatteryManager;
 import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
-
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.sql.Time;
 
 public class Notification extends BroadcastReceiver {
 
@@ -29,9 +22,9 @@ public class Notification extends BroadcastReceiver {
 
     private static NotificationCompat.Builder batteryInfoBuilder;
     private static Intent batteryStatus;
-    private static Boolean charging = false;
+    private static Boolean charging;
     private static int level, voltage;
-    private static double temperature, lastChange = SystemClock.elapsedRealtime() ;
+    private static double temperature, lastChange;
     private static String plugged, status;
     private NotificationManager mNotificationManager;
 
@@ -77,8 +70,6 @@ public class Notification extends BroadcastReceiver {
                 .setOngoing(true)
                 .setShowWhen(false);
 
-            lastChange = SystemClock.elapsedRealtime();
-
             Intent resultIntent = new Intent(BATS_STOP);
             resultIntent.putExtra("Action", "Stop");
             PendingIntent resultPendingIntent = PendingIntent.getBroadcast(context, 0, resultIntent, 0);
@@ -110,8 +101,14 @@ public class Notification extends BroadcastReceiver {
     }
 
     private String statusToMessage(int state) {
+        if(charging == null){
+            charging = !(state == BatteryManager.BATTERY_STATUS_NOT_CHARGING ||
+                    state == BatteryManager.BATTERY_STATUS_DISCHARGING);
+            lastChange = SystemClock.elapsedRealtime();
+        }
+
         if(state == BatteryManager.BATTERY_STATUS_CHARGING) {
-            if(!charging) {
+            if( !charging) {
                 changeChargeState();
             }
             return "Charging";
