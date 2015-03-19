@@ -21,7 +21,8 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
 
         Intent alarmIntent = new Intent(getApplicationContext(), Notification.class);
-        Notification.alarmPendingIntent = PendingIntent.getBroadcast(this, 0, alarmIntent, 0);
+        Notification.alarmPendingIntent =
+                PendingIntent.getBroadcast(getApplicationContext(), 0, alarmIntent, 0);
 
         Notification.manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         Notification.manager.setRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime(),
