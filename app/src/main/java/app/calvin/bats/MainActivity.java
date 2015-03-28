@@ -24,6 +24,7 @@ public class MainActivity extends ActionBarActivity {
         //check if we should cancel notification instead of updating
         if(getIntent().hasExtra("Action")) {
             Notification.manager.cancel(Notification.alarmPendingIntent);
+            Notification.alarmPendingIntent = null;
             mNotificationManager =
                     (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
             mNotificationManager.cancel(Notification.notificationID);

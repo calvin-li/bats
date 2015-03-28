@@ -30,6 +30,11 @@ public class Notification extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if(context == null){
+            context = new MainActivity();
+            MainActivity.makeToast("MainActivity died", context);
+        }
+
         //if startup, create a MainActivity to start AlarmManager, then return
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             Intent serviceIntent = new Intent(context, MainActivity.class);
