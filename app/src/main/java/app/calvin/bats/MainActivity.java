@@ -1,6 +1,7 @@
 package app.calvin.bats;
 
 import android.app.AlarmManager;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -14,19 +15,30 @@ import android.widget.Toast;
 public class MainActivity extends ActionBarActivity {
 
     protected static final String TAG = "MainActivity";
+    private NotificationManager mNotificationManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
-        Intent alarmIntent = new Intent(getApplicationContext(), Notification.class);
-        Notification.alarmPendingIntent =
-                PendingIntent.getBroadcast(getApplicationContext(), 0, alarmIntent, 0);
+        //check if we should cancel notification instead of updating
+        if(getIntent().hasExtra("Action")) {
+            Notification.manager.cancel(Notification.alarmPendingIntent);
+            mNotificationManager =
+                    (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+            mNotificationManager.cancel(Notification.notificationID);
+        }
+        else if(Notification.alarmPendingIntent == null) {
+            makeToast("Bats started", this);
+            Intent alarmIntent = new Intent(getApplicationContext(), Notification.class);
+            Notification.alarmPendingIntent =
+                    PendingIntent.getBroadcast(getApplicationContext(), 0, alarmIntent, 0);
 
-        Notification.manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        Notification.manager.setRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime(),
-                Notification.updateInterval, Notification.alarmPendingIntent);
+            Notification.manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            Notification.manager.setRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime(),
+                    Notification.updateInterval, Notification.alarmPendingIntent);
+        }
+
         finish();
     }
 

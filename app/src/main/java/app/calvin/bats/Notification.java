@@ -30,12 +30,10 @@ public class Notification extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        //check if we should cancel notification instead of updating
-        if(intent.hasExtra("Action")) {
-            manager.cancel(alarmPendingIntent);
-            mNotificationManager =
-                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            mNotificationManager.cancel(notificationID);
+        //if startup, create a MainActivity to start AlarmManager, then return
+        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+            Intent serviceIntent = new Intent(context, MainActivity.class);
+            context.startService(serviceIntent);
             return;
         }
 
@@ -70,9 +68,10 @@ public class Notification extends BroadcastReceiver {
                 .setOngoing(true)
                 .setShowWhen(false);
 
-            Intent resultIntent = new Intent(BATS_STOP);
+            Intent resultIntent = new Intent(context, MainActivity.class);
+
             resultIntent.putExtra("Action", "Stop");
-            PendingIntent resultPendingIntent = PendingIntent.getBroadcast(context, 0, resultIntent, 0);
+            PendingIntent resultPendingIntent = PendingIntent.getActivity(context, 0, resultIntent, 0);
             batteryInfoBuilder.setContentIntent(resultPendingIntent);
         }
 
@@ -88,6 +87,7 @@ public class Notification extends BroadcastReceiver {
     }
 
     private String plugToMessage(int state) {
+        //TODO: put state into memory so it persists between alarms
         String ret = " ";
         if(state == BatteryManager.BATTERY_PLUGGED_AC)
             return ret + "(AC)";
